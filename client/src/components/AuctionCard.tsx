@@ -1,25 +1,33 @@
 import { Link } from 'react-router-dom';
 import type { Auction } from '../types';
-import { CONDITION_LABELS, STATUS_LABELS, capitalize, priceLine } from '../format';
+import { CONDITION_LABELS, STATUS_LABELS, capitalize, rupees } from '../format';
 import { Countdown } from './Countdown';
 
 export function AuctionCard({ auction, note }: { auction: Auction; note?: string }) {
+  const live = auction.status === 'live';
+  const price = auction.currentPrice ?? auction.startPrice;
+
   return (
     <Link to={`/auctions/${auction.id}`} className="card">
       <div className="card-photo">
-        {auction.photos[0] ? <img src={auction.photos[0]} alt={auction.title} /> : <span>No photo</span>}
+        {auction.photos[0] ? <img src={auction.photos[0]} alt={auction.title} loading="lazy" /> : <span>No photo</span>}
+        {!live && <span className={`card-status status-${auction.status}`}>{STATUS_LABELS[auction.status]}</span>}
       </div>
       <div className="card-body">
-        <div className="badges">
-          <span className="badge">{capitalize(auction.category)}</span>
-          <span className="badge">{CONDITION_LABELS[auction.condition] ?? auction.condition}</span>
-          {auction.status !== 'live' && <span className={`badge status-${auction.status}`}>{STATUS_LABELS[auction.status]}</span>}
+        <p className="card-meta"><span className={`cat-dot cat-${auction.category}`} />{capitalize(auction.category)} · {CONDITION_LABELS[auction.condition] ?? auction.condition}</p>
+        <h3 className="card-title">{auction.title}</h3>
+        <div className="card-price">
+          <span className="price">{rupees(price)}</span>
+          <span className="muted">{auction.bidCount === 0 ? 'Starting price' : `${auction.bidCount} bid${auction.bidCount === 1 ? '' : 's'}`}</span>
         </div>
-        <h3>{auction.title}</h3>
-        <p className="price">{priceLine(auction)}</p>
-        {auction.status === 'live' && <p className="muted">Closes in <Countdown endsAt={auction.endsAt} /></p>}
         {note && <p className="card-note">{note}</p>}
       </div>
+      {live && (
+        <div className="card-foot">
+          <span className="muted">Ends in</span>
+          <Countdown endsAt={auction.endsAt} />
+        </div>
+      )}
     </Link>
   );
 }

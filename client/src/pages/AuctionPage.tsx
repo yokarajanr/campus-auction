@@ -78,7 +78,16 @@ export function AuctionPage() {
   }
 
   return (
+    <>
+    <nav className="crumbs" aria-label="Breadcrumb">
+      <Link to="/">Browse</Link>
+      <span aria-hidden="true">/</span>
+      <Link to={`/?category=${a.category}`}>{capitalize(a.category)}</Link>
+      <span aria-hidden="true">/</span>
+      <span className="crumb-current">{a.title}</span>
+    </nav>
     <div className="auction">
+      <div className="auction-side">
       <div className="gallery panel">
         <div className="main-photo">
           {a.photos[photoIndex] ? <img src={a.photos[photoIndex]} alt={a.title} /> : <span>No photo</span>}
@@ -94,8 +103,18 @@ export function AuctionPage() {
         )}
       </div>
 
+        {a.description && (
+          <div className="panel description-panel">
+            <h2>Description</h2>
+            <p className="description">{a.description}</p>
+          </div>
+        )}
+
+        <div className="qna-panel"><QnA auction={a} /></div>
+      </div>
+
       <div className="info">
-        <div className="panel">
+        <div className="panel main-panel">
           <div className="badges">
             <span className="badge">{capitalize(a.category)}</span>
             <span className="badge">{CONDITION_LABELS[a.condition] ?? a.condition}</span>
@@ -106,9 +125,16 @@ export function AuctionPage() {
 
           <div className="price-box">
             <div>
-              <p className="label">{a.currentPrice == null ? 'Starting price' : 'Leading bid'}</p>
-              <p className="big">{rupees(a.currentPrice ?? a.startPrice)}</p>
-              {a.leaderName && <p className="muted">by {a.leaderName}</p>}
+              <p className="label">{a.currentPrice == null ? 'Starting price' : open ? 'Leading bid' : 'Winning bid'}</p>
+              <p className="big lead-price">{rupees(a.currentPrice ?? a.startPrice)}</p>
+              {a.leaderName ? (
+                <span className={`leader-chip ${a.leaderId === user?.id ? 'me' : ''}`}>
+                  <span className="mini-avatar">{initialsOf(a.leaderName)}</span>
+                  {a.leaderId === user?.id ? 'You are leading' : <><strong>{a.leaderName}</strong>&nbsp;{open ? 'is leading' : 'won'}</>}
+                </span>
+              ) : (
+                <span className="leader-chip empty">No bids yet. Be the first!</span>
+              )}
             </div>
             <div>
               <p className="label">{open ? 'Closes in' : 'Closed at'}</p>
@@ -138,31 +164,23 @@ export function AuctionPage() {
           )}
         </div>
 
-        {a.description && (
-          <div className="panel">
-            <h2>Description</h2>
-            <p className="description">{a.description}</p>
-          </div>
-        )}
-
         {autoBids.length > 0 && (
-          <div className="panel">
+          <div className="panel maxima-panel">
             <h2>Automatic bid maximums (public)</h2>
             <ul className="plain">
               {autoBids.map((ab) => (
                 <li key={ab.userId}>
                   {ab.userName}: up to {rupees(ab.maxAmount)}
-                  {ab.userId === a.leaderId ? <span className="tag">leading</span>
-                    : ab.maxAmount < a.nextMinBid ? <span className="tag muted-tag">exceeded</span> : null}
+                  {ab.maxAmount < (a.currentPrice ?? 0) || (ab.userId !== a.leaderId && ab.maxAmount < a.nextMinBid)
+                    ? <span className="tag muted-tag">exceeded</span>
+                    : ab.userId === a.leaderId ? <span className="tag">leading</span> : null}
                 </li>
               ))}
             </ul>
           </div>
         )}
 
-        <QnA auction={a} />
-
-        <div className="panel">
+        <div className="panel history-panel">
           <h2>Bid history ({bids.length})</h2>
           {bids.length === 0 ? <p className="muted">No bids yet. Be the first!</p> : (
             <table className="bids">
@@ -170,9 +188,16 @@ export function AuctionPage() {
               <tbody>
                 {bids.map((b, i) => (
                   <tr key={b.id} className={i === 0 ? 'leading' : ''}>
-                    <td>{b.bidderName}{b.isAuto && <span className="tag">auto</span>}</td>
-                    <td>{rupees(b.amount)}</td>
-                    <td>{formatTime(b.createdAt)}</td>
+                    <td>
+                      <span className="bidder">
+                        <span className="mini-avatar">{initialsOf(b.bidderName)}</span>
+                        <span>{b.bidderName}{b.bidderId === user?.id && <span className="you"> (you)</span>}</span>
+                        {b.isAuto && <span className="tag">auto</span>}
+                        {i === 0 && <span className="tag lead-tag">{a.status === 'live' ? 'leading' : 'top bid'}</span>}
+                      </span>
+                    </td>
+                    <td className="amount">{rupees(b.amount)}</td>
+                    <td className="muted">{formatTime(b.createdAt)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -181,5 +206,10 @@ export function AuctionPage() {
         </div>
       </div>
     </div>
+    </>
   );
+}
+
+function initialsOf(name: string) {
+  return name.replace(/\(.*?\)/g, '').split(/\s+/).filter((w) => /^[a-z]/i.test(w)).map((w) => w[0]).join('').slice(0, 2).toUpperCase() || '?';
 }
