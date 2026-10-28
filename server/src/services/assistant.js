@@ -5,11 +5,14 @@ import { answeredFaq } from './questions.js';
 import db from '../db.js';
 
 const MAX_TOOL_ROUNDS = 5;
+const GEMINI_DEADLINE_MS = Number(process.env.GEMINI_TIMEOUT_MS) || 20_000;
+let geminiPausedUntil = 0;
 const RESULT_LIMIT = 6;
 
 const SYSTEM_PROMPT = `You are the Campus Auction assistant. Students buy second-hand items (cycles, calculators, books, electronics) from seniors through public auctions.
 Rules you must always follow:
 - Use the tools for every fact about listings. Never invent items, prices or closing times.
+- Write plain text only, no markdown (no asterisks, no headings). Refer to items by title, not by auction number.
 - Give a straight, short answer. When asked to find something, recommend the single best match first (best price for what they asked), then mention up to two alternatives.
 - Prices are whole Indian rupees. Write them like ₹1,500.
 - You cannot place bids or save searches yourself. To bid for the student, call propose_auto_bid; to watch for future items, call propose_saved_search. The app then shows a confirmation card and only the student's click acts.
@@ -156,16 +159,24 @@ async function chatWithGemini(messages, viewerId) {
   const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
   const contents = messages.map((m) => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.text }] }));
   const collected = { results: null, proposals: [] };
+  // One deadline for the whole conversation, so a slow or stuck AI call falls back instead of freezing the chat.
+  const abortSignal = AbortSignal.timeout(GEMINI_DEADLINE_MS);
 
   for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
     const response = await ai.models.generateContent({
-      model: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
+      model: process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite',
       contents,
-      config: { systemInstruction: SYSTEM_PROMPT, tools: [{ functionDeclarations: TOOLS }], temperature: 0.2 },
+      config: {
+        systemInstruction: SYSTEM_PROMPT,
+        tools: [{ functionDeclarations: TOOLS }],
+        thinkingConfig: { thinkingLevel: 'MINIMAL' },
+        abortSignal,
+      },
     });
     const calls = response.functionCalls ?? [];
     if (calls.length === 0) {
-      return { reply: response.text?.trim() || 'Sorry, I could not come up with an answer.', ...collected, mode: 'gemini' };
+      const reply = (response.text ?? '').replace(/\*\*/g, '').trim();
+      return { reply: reply || 'Sorry, I could not come up with an answer.', ...collected, mode: 'gemini' };
     }
     contents.push(response.candidates[0].content);
     contents.push({
@@ -213,6 +224,14 @@ function chatWithRules(messages, viewerId) {
   const req = parseRequest(last);
   const collected = { results: null, proposals: [] };
 
+  if (/e-?mail|phone|number of|contact|whatsapp|address of|who is (the )?(seller|bidder)/i.test(last)) {
+    return {
+      reply: "I can't share other students' account or contact details. Public bids only show display names. To ask the seller something, use the Questions section on the auction page.",
+      ...collected,
+      mode: 'rules',
+    };
+  }
+
   if (!req.category && !req.keyword && !req.wantsAlert) {
     return { reply: 'Tell me what you need, for example "find me a cycle under ₹2,000" or "alert me about scientific calculators up to ₹400".', ...collected, mode: 'rules' };
   }
@@ -256,13 +275,23 @@ export async function chat(messages, viewerId) {
     .map((m) => ({ role: m.role, text: m.text.slice(0, 1000) }));
   if (!clean.length || clean[clean.length - 1].role !== 'user') return { reply: 'Ask me something!', results: null, proposals: [], mode: 'rules' };
 
-  if (process.env.GEMINI_API_KEY) {
-    try {
-      return await chatWithGemini(clean, viewerId);
-    } catch (err) {
-      console.error('Gemini failed, using offline assistant:', err.message);
-      return { ...chatWithRules(clean, viewerId), fallbackReason: 'AI service unavailable, using offline mode.' };
-    }
+  if (!process.env.GEMINI_API_KEY) return chatWithRules(clean, viewerId);
+  if (Date.now() < geminiPausedUntil) {
+    return { ...chatWithRules(clean, viewerId), fallbackReason: 'The AI is resting for a moment (free usage limit), so the offline assistant answered.' };
   }
-  return chatWithRules(clean, viewerId);
+  try {
+    return await chatWithGemini(clean, viewerId);
+  } catch (err) {
+    const timedOut = err.name === 'TimeoutError' || err.name === 'AbortError';
+    const rateLimited = /RESOURCE_EXHAUSTED|"code":\s*429/.test(err.message);
+    if (rateLimited) {
+      const retrySeconds = Number(err.message.match(/retry in ([\d.]+)s/i)?.[1]) || 60;
+      geminiPausedUntil = Date.now() + Math.ceil(retrySeconds) * 1000;
+    }
+    console.error(`Gemini ${timedOut ? 'timed out' : rateLimited ? 'rate-limited' : 'failed'}, using offline assistant:`, err.message.slice(0, 200));
+    const fallbackReason = timedOut ? 'The AI took too long, so the offline assistant answered.'
+      : rateLimited ? 'The AI is resting for a moment (free usage limit), so the offline assistant answered.'
+      : 'AI service unavailable, using offline mode.';
+    return { ...chatWithRules(clean, viewerId), fallbackReason };
+  }
 }
