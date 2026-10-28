@@ -8,6 +8,7 @@ import { CONDITION_LABELS, STATUS_LABELS, capitalize, formatTime, rupees } from 
 import { Countdown } from '../components/Countdown';
 import { BidBox } from '../components/BidBox';
 import { SalePanel } from '../components/SalePanel';
+import { AutoBidBox } from '../components/AutoBidBox';
 import { useNow } from '../hooks';
 
 export function AuctionPage() {
@@ -120,6 +121,7 @@ export function AuctionPage() {
             <>
               <p className="muted">Next bid must be at least <strong>{rupees(a.nextMinBid)}</strong> (increment {rupees(a.minIncrement)}).</p>
               <BidBox auction={a} onPlaced={(d) => { setDetail(d); if (d.extended) showExtended(); }} />
+              <AutoBidBox detail={detail} onChange={(d) => { setDetail(d); if (d.extended) showExtended(); }} />
             </>
           )}
           {closing && <p className="muted">Bidding has ended. Finalising the result...</p>}
@@ -146,7 +148,13 @@ export function AuctionPage() {
           <div className="panel">
             <h2>Automatic bid maximums (public)</h2>
             <ul className="plain">
-              {autoBids.map((ab) => <li key={ab.userId}>{ab.userName}: up to {rupees(ab.maxAmount)}</li>)}
+              {autoBids.map((ab) => (
+                <li key={ab.userId}>
+                  {ab.userName}: up to {rupees(ab.maxAmount)}
+                  {ab.userId === a.leaderId ? <span className="tag">leading</span>
+                    : ab.maxAmount < a.nextMinBid ? <span className="tag muted-tag">exceeded</span> : null}
+                </li>
+              ))}
             </ul>
           </div>
         )}

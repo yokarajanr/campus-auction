@@ -87,7 +87,10 @@ setEndsAt(cycle.id, Date.now() + 20_000);
 const before = Date.now();
 r = await api('POST', `/auctions/${cycle.id}/bids`, { token: asha.token, json: { amount: 1200 } });
 const newEnd = r.data?.auction.endsAt;
-check('bid with 20s left extends closing to ~60s after the bid', r.data?.extended === true && newEnd >= before + 60_000 && newEnd <= Date.now() + 60_000, `${Math.round((newEnd - Date.now()) / 1000)}s left`);
+const SKEW_MS = 100; // test and server are separate processes; allow small clock-read differences
+check('bid with 20s left extends closing to ~60s after the bid',
+  r.data?.extended === true && newEnd >= before + 60_000 - SKEW_MS && newEnd <= Date.now() + 60_000 + SKEW_MS,
+  `${Math.round((newEnd - Date.now()) / 1000)}s left`);
 await sleep(300);
 check('watchers were told about the extension', events.some((e) => e.reason === 'bid' && e.extended === true && e.endsAt === newEnd));
 
