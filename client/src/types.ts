@@ -59,5 +59,15 @@ export interface AuctionDetail {
   auction: Auction;
   bids: Bid[];
   autoBids: AutoBid[];
+  pickupCode: string | null;
   serverNow: number;
+}
+
+export interface AppNotification {
+  id: number;
+  type: string;
+  message: string;
+  auctionId: number | null;
+  read: boolean;
+  createdAt: number;
 }

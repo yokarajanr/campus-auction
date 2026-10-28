@@ -3,7 +3,7 @@ import type { Auction } from '../types';
 import { CONDITION_LABELS, STATUS_LABELS, capitalize, priceLine } from '../format';
 import { Countdown } from './Countdown';
 
-export function AuctionCard({ auction }: { auction: Auction }) {
+export function AuctionCard({ auction, note }: { auction: Auction; note?: string }) {
   return (
     <Link to={`/auctions/${auction.id}`} className="card">
       <div className="card-photo">
@@ -18,6 +18,7 @@ export function AuctionCard({ auction }: { auction: Auction }) {
         <h3>{auction.title}</h3>
         <p className="price">{priceLine(auction)}</p>
         {auction.status === 'live' && <p className="muted">Closes in <Countdown endsAt={auction.endsAt} /></p>}
+        {note && <p className="card-note">{note}</p>}
       </div>
     </Link>
   );

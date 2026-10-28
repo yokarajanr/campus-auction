@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import db from '../db.js';
 import { HttpError } from '../errors.js';
-import { requireAuth } from '../auth.js';
+import { optionalAuth, requireAuth } from '../auth.js';
 import { uploadPhotos, photoUrl, deletePhotoFiles, MAX_PHOTOS } from '../upload.js';
 import { CATEGORIES, CONDITIONS, getAuctionRow, auctionDetail, searchAuctions, toPublicAuction } from '../services/auctions.js';
 import { emitAuctionUpdate, notify } from '../services/realtime.js';
@@ -101,8 +101,14 @@ router.get('/mine', requireAuth, (req, res) => {
   res.json({ auctions: rows.map((r) => toPublicAuction(getAuctionRow(r.id))), serverNow: Date.now() });
 });
 
-router.get('/:id', (req, res) => {
-  const detail = auctionDetail(Number(req.params.id));
+router.get('/bidding', requireAuth, (req, res) => {
+  const rows = db.prepare(`
+    SELECT auction_id AS id FROM bids WHERE bidder_id = ? GROUP BY auction_id ORDER BY MAX(id) DESC`).all(req.user.id);
+  res.json({ auctions: rows.map((r) => toPublicAuction(getAuctionRow(r.id))), serverNow: Date.now() });
+});
+
+router.get('/:id', optionalAuth, (req, res) => {
+  const detail = auctionDetail(Number(req.params.id), { viewerId: req.user?.id });
   if (!detail) throw new HttpError(404, 'Auction not found');
   res.json(detail);
 });

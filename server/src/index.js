@@ -8,6 +8,9 @@ import { errorHandler } from './errors.js';
 import authRoutes from './routes/auth.js';
 import auctionRoutes from './routes/auctions.js';
 import bidRoutes from './routes/bids.js';
+import saleRoutes from './routes/sale.js';
+import notificationRoutes from './routes/notifications.js';
+import { userFromToken } from './auth.js';
 import { startCloser } from './services/closer.js';
 import { UPLOADS_DIR } from './upload.js';
 import { setIo } from './services/realtime.js';
@@ -27,6 +30,8 @@ app.use('/uploads', express.static(UPLOADS_DIR, { maxAge: '1d' }));
 app.use('/api/auth', authRoutes);
 app.use('/api/auctions', auctionRoutes);
 app.use('/api/auctions', bidRoutes);
+app.use('/api/auctions', saleRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 app.use('/api', (req, res) => res.status(404).json({ error: 'Not found' }));
 app.use(errorHandler);
@@ -37,6 +42,8 @@ setIo(io);
 
 io.on('connection', (socket) => {
   socket.emit('hello', { serverNow: Date.now() });
+  const user = userFromToken(socket.handshake.auth?.token);
+  if (user) socket.join(`user:${user.id}`);
   socket.on('auction:join', (id) => {
     if (Number.isInteger(id)) socket.join(`auction:${id}`);
   });

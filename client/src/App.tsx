@@ -5,6 +5,8 @@ import { Login } from './pages/Login';
 import { Sell } from './pages/Sell';
 import { AuctionPage } from './pages/AuctionPage';
 import { MyListings } from './pages/MyListings';
+import { MyBids } from './pages/MyBids';
+import { NotificationBell } from './components/NotificationBell';
 
 function Header() {
   const { user, logout } = useAuth();
@@ -16,10 +18,12 @@ function Header() {
           <NavLink to="/" end>Browse</NavLink>
           <NavLink to="/sell">Sell</NavLink>
           {user && <NavLink to="/my-listings">My listings</NavLink>}
+          {user && <NavLink to="/my-bids">My bids</NavLink>}
         </nav>
         <div className="user">
           {user ? (
             <>
+              <NotificationBell />
               <span>Hi, {user.name}</span>
               <button className="btn small" onClick={logout}>Log out</button>
             </>
@@ -45,6 +49,7 @@ export default function App() {
             <Route path="/sell" element={<RequireAuth><Sell key="new" /></RequireAuth>} />
             <Route path="/auctions/:id/edit" element={<RequireAuth><Sell key="edit" /></RequireAuth>} />
             <Route path="/my-listings" element={<RequireAuth><MyListings /></RequireAuth>} />
+            <Route path="/my-bids" element={<RequireAuth><MyBids /></RequireAuth>} />
             <Route path="*" element={<p className="muted">Page not found.</p>} />
           </Routes>
         </main>

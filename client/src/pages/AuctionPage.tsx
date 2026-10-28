@@ -7,6 +7,7 @@ import type { AuctionDetail } from '../types';
 import { CONDITION_LABELS, STATUS_LABELS, capitalize, formatTime, rupees } from '../format';
 import { Countdown } from '../components/Countdown';
 import { BidBox } from '../components/BidBox';
+import { SalePanel } from '../components/SalePanel';
 import { useNow } from '../hooks';
 
 export function AuctionPage() {
@@ -123,6 +124,7 @@ export function AuctionPage() {
           )}
           {closing && <p className="muted">Bidding has ended. Finalising the result...</p>}
           {a.outcomeNote && <p className="notice">{a.outcomeNote}</p>}
+          <SalePanel detail={detail} onChange={setDetail} />
           {error && <p className="error">{error}</p>}
 
           {isSeller && open && (

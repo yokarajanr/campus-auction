@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { api, getToken, setToken } from './api';
+import { reconnectSocket } from './socket';
 import type { User } from './types';
 
 interface AuthValue {
@@ -29,6 +30,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const r = await api<{ token: string; user: User }>(path, { method: 'POST', json: body });
     setToken(r.token);
     setUser(r.user);
+    reconnectSocket();
   }
 
   const value: AuthValue = {
@@ -39,6 +41,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     logout: () => {
       setToken(null);
       setUser(null);
+      reconnectSocket();
     },
   };
 

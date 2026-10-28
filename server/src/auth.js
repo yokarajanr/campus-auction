@@ -20,11 +20,20 @@ export function userFromToken(token) {
   }
 }
 
-export function requireAuth(req, res, next) {
+function userFromRequest(req) {
   const header = req.get('authorization') || '';
   const token = header.startsWith('Bearer ') ? header.slice(7) : null;
-  const user = token && userFromToken(token);
+  return token ? userFromToken(token) : null;
+}
+
+export function requireAuth(req, res, next) {
+  const user = userFromRequest(req);
   if (!user) throw new HttpError(401, 'Please log in first');
   req.user = user;
+  next();
+}
+
+export function optionalAuth(req, res, next) {
+  req.user = userFromRequest(req);
   next();
 }

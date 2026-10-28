@@ -48,7 +48,8 @@ export function toPublicAuction(row) {
   };
 }
 
-export function auctionDetail(id) {
+// The pickup code is only revealed to the winner while the item is reserved.
+export function auctionDetail(id, { viewerId = null } = {}) {
   const row = getAuctionRow(id);
   if (!row) return null;
   const bids = db.prepare(`
@@ -63,6 +64,7 @@ export function auctionDetail(id) {
     auction: toPublicAuction(row),
     bids: bids.map((b) => ({ ...b, isAuto: Boolean(b.isAuto) })),
     autoBids,
+    pickupCode: viewerId != null && viewerId === row.winner_id && row.status === 'reserved' ? row.pickup_code : null,
     serverNow: Date.now(),
   };
 }
