@@ -12,6 +12,7 @@ import saleRoutes from './routes/sale.js';
 import notificationRoutes from './routes/notifications.js';
 import savedSearchRoutes from './routes/savedSearches.js';
 import assistantRoutes from './routes/assistant.js';
+import questionRoutes from './routes/questions.js';
 import { userFromToken } from './auth.js';
 import { startCloser } from './services/closer.js';
 import { UPLOADS_DIR } from './upload.js';
@@ -36,6 +37,7 @@ app.use('/api/auctions', saleRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/saved-searches', savedSearchRoutes);
 app.use('/api/assistant', assistantRoutes);
+app.use('/api', questionRoutes);
 
 app.use('/api', (req, res) => res.status(404).json({ error: 'Not found' }));
 app.use(errorHandler);

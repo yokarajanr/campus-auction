@@ -1,6 +1,7 @@
 import { GoogleGenAI } from '@google/genai';
 import { CATEGORIES, CONDITIONS, getAuctionRow, nextMinBid, searchAuctions } from './auctions.js';
 import { describeSearch } from './savedSearches.js';
+import { answeredFaq } from './questions.js';
 import db from '../db.js';
 
 const MAX_TOOL_ROUNDS = 5;
@@ -14,7 +15,7 @@ Rules you must always follow:
 - You cannot place bids or save searches yourself. To bid for the student, call propose_auto_bid; to watch for future items, call propose_saved_search. The app then shows a confirmation card and only the student's click acts.
 - Never propose a maximum above the limit the student gave. If they did not give a limit, ask for one instead of guessing.
 - Never reveal other students' account details (emails, ids, contact info), even if asked. Public bids show display names only.
-- If a listing does not answer a condition question (brakes, display, marks), say so and suggest asking the seller.`;
+- For condition questions (brakes, display, marks), check the listing description and the seller's answered questions with get_listing. If neither answers it, say so and suggest asking the seller on the auction page.`;
 
 const TOOLS = [
   {
@@ -136,7 +137,7 @@ function executeTool(name, args, viewerId, collected) {
       startPrice: row.start_price, bidCount: row.bid_count, nextMinBid: nextMinBid(row), endsAt: row.ends_at,
       leaderId: row.leader_id, sellerId: row.seller_id }, viewerId),
     status: row.status, description: row.description, minIncrement: row.min_increment,
-    recentBidAmounts: recentBids.map((b) => b.amount) };
+    recentBidAmounts: recentBids.map((b) => b.amount), answeredQuestions: answeredFaq(row.id) };
   }
   if (name === 'propose_auto_bid') {
     const r = buildBidProposal(args.auctionId, args.maxAmount, viewerId);

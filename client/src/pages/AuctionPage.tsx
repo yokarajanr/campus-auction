@@ -9,6 +9,7 @@ import { Countdown } from '../components/Countdown';
 import { BidBox } from '../components/BidBox';
 import { SalePanel } from '../components/SalePanel';
 import { AutoBidBox } from '../components/AutoBidBox';
+import { QnA } from '../components/QnA';
 import { useNow } from '../hooks';
 
 export function AuctionPage() {
@@ -158,6 +159,8 @@ export function AuctionPage() {
             </ul>
           </div>
         )}
+
+        <QnA auction={a} />
 
         <div className="panel">
           <h2>Bid history ({bids.length})</h2>

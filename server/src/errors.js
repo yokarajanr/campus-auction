@@ -1,13 +1,14 @@
 export class HttpError extends Error {
-  constructor(status, message) {
+  constructor(status, message, extra = {}) {
     super(message);
     this.status = status;
+    this.extra = extra;
   }
 }
 
 export function errorHandler(err, req, res, next) {
   if (err instanceof HttpError) {
-    return res.status(err.status).json({ error: err.message });
+    return res.status(err.status).json({ error: err.message, ...err.extra });
   }
   if (err?.name === 'MulterError') {
     const message = err.code === 'LIMIT_FILE_SIZE' ? 'Each photo must be under 3 MB'

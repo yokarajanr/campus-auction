@@ -5,9 +5,11 @@ let clockOffsetMs = 0;
 
 export class ApiError extends Error {
   status: number;
-  constructor(status: number, message: string) {
+  data: Record<string, unknown> | null;
+  constructor(status: number, message: string, data: Record<string, unknown> | null = null) {
     super(message);
     this.status = status;
+    this.data = data;
   }
 }
 
@@ -53,6 +55,6 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
 
   const data = await res.json().catch(() => null);
   if (data && typeof data.serverNow === 'number') clockOffsetMs = data.serverNow - Date.now();
-  if (!res.ok) throw new ApiError(res.status, data?.error ?? `Request failed (${res.status})`);
+  if (!res.ok) throw new ApiError(res.status, data?.error ?? `Request failed (${res.status})`, data);
   return data as T;
 }

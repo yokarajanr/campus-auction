@@ -74,6 +74,19 @@ export interface SavedSearch {
   createdAt: number;
 }
 
+export interface Question {
+  id: number;
+  askerName: string;
+  text: string;
+  answer: string | null;
+  answeredAt: number | null;
+  createdAt: number;
+  sameCount: number;
+  hidden: boolean;
+  mine: boolean;
+  viewerVoted: boolean;
+}
+
 export type Proposal =
   | { type: 'auto_bid'; auctionId: number; title: string; maxAmount: number; currentPrice: number; nextMinBid: number }
   | { type: 'saved_search'; keyword: string; category: string | null; maxPrice: number | null; label: string };

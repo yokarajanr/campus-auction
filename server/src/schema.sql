@@ -65,6 +65,13 @@ CREATE TABLE IF NOT EXISTS questions (
 );
 CREATE INDEX IF NOT EXISTS idx_questions_auction ON questions(auction_id);
 
+CREATE TABLE IF NOT EXISTS question_votes (
+  question_id INTEGER NOT NULL REFERENCES questions(id),
+  user_id     INTEGER NOT NULL REFERENCES users(id),
+  created_at  INTEGER NOT NULL,
+  PRIMARY KEY (question_id, user_id)
+);
+
 CREATE TABLE IF NOT EXISTS saved_searches (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id     INTEGER NOT NULL REFERENCES users(id),
