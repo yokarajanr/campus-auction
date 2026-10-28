@@ -25,6 +25,27 @@ npm install
 npm run dev              # http://localhost:5173
 ```
 
+## Demo data
+
+```powershell
+cd server
+npm run seed              # adds 5 demo students and 8 live auctions (keeps existing data)
+npm run seed -- --reset   # WARNING: deletes ALL data first, then seeds a clean demo
+```
+
+All demo accounts use the password `demo1234`: `ravi@campus.demo` and `meena@campus.demo` (sellers), `priya@campus.demo`, `arjun@campus.demo`, `karthik@campus.demo` (buyers). Closing times are relative to when you seed (some close in 3, 6 and 12 minutes), so seed shortly before a demo.
+
+## Tests
+
+```powershell
+cd server
+npm test                               # unit tests (in-memory database)
+node scripts/smoke-listings.js         # live checks against a running server
+node scripts/smoke-bidding.js
+node scripts/smoke-sale.js
+node scripts/smoke-saved-searches.js
+```
+
 ## Status
 
 Work in progress during the hackathon (Oct 28, 2026).
