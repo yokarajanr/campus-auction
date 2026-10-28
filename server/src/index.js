@@ -6,6 +6,9 @@ import { Server } from 'socket.io';
 import './db.js';
 import { errorHandler } from './errors.js';
 import authRoutes from './routes/auth.js';
+import auctionRoutes from './routes/auctions.js';
+import { UPLOADS_DIR } from './upload.js';
+import { setIo } from './services/realtime.js';
 
 const PORT = Number(process.env.PORT) || 4000;
 const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || 'http://localhost:5173';
@@ -18,13 +21,16 @@ app.get('/api/health', (req, res) => {
   res.json({ ok: true, serverNow: Date.now() });
 });
 
+app.use('/uploads', express.static(UPLOADS_DIR, { maxAge: '1d' }));
 app.use('/api/auth', authRoutes);
+app.use('/api/auctions', auctionRoutes);
 
 app.use('/api', (req, res) => res.status(404).json({ error: 'Not found' }));
 app.use(errorHandler);
 
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: CLIENT_ORIGIN } });
+setIo(io);
 
 io.on('connection', (socket) => {
   socket.emit('hello', { serverNow: Date.now() });
