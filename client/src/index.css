@@ -336,6 +336,16 @@ input:disabled, select:disabled { background: #f3f4f6; color: var(--muted); }
 .photo-missing { color: var(--muted); font-size: 0.9rem; }
 .main-photo img.photo-img, .card-photo img.photo-img, .feature-photo img.photo-img { object-fit: contain; }
 
+/* Photo picker */
+.photo-drop {
+  display: flex !important; flex-direction: row !important; align-items: center; gap: 0.75rem; margin-top: 0.6rem; padding: 0.9rem 1rem;
+  border: 1.5px dashed var(--border-strong); border-radius: 12px; background: #fafbfd; cursor: pointer; transition: border-color 0.15s, background 0.15s;
+}
+.photo-drop:hover { border-color: var(--primary); background: var(--primary-soft); }
+.photo-drop input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.photo-drop-icon { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; background: var(--primary-soft); color: var(--primary); font-size: 1.4rem; font-weight: 600; flex-shrink: 0; }
+.photo-drop .muted { font-weight: 400; }
+
 /* Email alert controls */
 .email-check { flex-direction: row !important; align-items: center; gap: 0.5rem; font-weight: 500; }
 .switch { display: inline-flex; align-items: center; gap: 0.45rem; background: none; border: none; cursor: pointer; font: inherit; font-size: 0.82rem; color: var(--muted); padding: 0.2rem; }

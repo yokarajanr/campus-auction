@@ -4,6 +4,7 @@ import { api, serverNow } from '../api';
 import { useAuth } from '../auth';
 import type { Auction, AuctionDetail } from '../types';
 import { CATEGORIES, CONDITION_LABELS, capitalize, toLocalInput } from '../format';
+import { prepareImage } from '../images';
 
 const MAX_PHOTOS = 5;
 
@@ -49,6 +50,7 @@ export function Sell() {
   const [newPhotos, setNewPhotos] = useState<File[]>([]);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [preparing, setPreparing] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -77,9 +79,24 @@ export function Sell() {
   const set = (key: keyof FormValues) => (e: { target: { value: string } }) => setValues((v) => ({ ...v, [key]: e.target.value }));
   const closeIn = (ms: number) => setValues((v) => ({ ...v, endsAt: toLocalInput(serverNow() + ms) }));
 
-  function addPhotos(files: FileList | null) {
-    if (!files) return;
-    setNewPhotos((current) => [...current, ...Array.from(files)].slice(0, MAX_PHOTOS - keepPhotos.length));
+  async function addPhotos(picked: File[]) {
+    if (picked.length === 0) return;
+    setError('');
+    setPreparing(true);
+    const room = MAX_PHOTOS - keepPhotos.length - newPhotos.length;
+    const ready: File[] = [];
+    const problems: string[] = [];
+    for (const file of picked.slice(0, Math.max(0, room))) {
+      try {
+        ready.push(await prepareImage(file));
+      } catch (err) {
+        problems.push((err as Error).message);
+      }
+    }
+    if (picked.length > room) problems.push(`Only ${MAX_PHOTOS} photos are allowed, so ${picked.length - Math.max(0, room)} were skipped.`);
+    setNewPhotos((current) => [...current, ...ready].slice(0, MAX_PHOTOS - keepPhotos.length));
+    if (problems.length) setError(problems.join(' '));
+    setPreparing(false);
   }
 
   async function submit(e: FormEvent) {
@@ -181,13 +198,20 @@ export function Sell() {
             ))}
           </div>
           {photoCount < MAX_PHOTOS && (
-            <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple
-              onChange={(e) => { addPhotos(e.target.files); e.target.value = ''; }} />
+            <label className="photo-drop">
+              <input type="file" accept="image/*,.heic,.heif" multiple disabled={preparing}
+                onChange={(e) => { const chosen = Array.from(e.target.files ?? []); e.target.value = ''; addPhotos(chosen); }} />
+              <span className="photo-drop-icon" aria-hidden="true">+</span>
+              <span>
+                <strong>{preparing ? 'Preparing photos...' : 'Add photos'}</strong>
+                <span className="muted"> · JPG, PNG, WEBP and more. Large photos are resized automatically.</span>
+              </span>
+            </label>
           )}
         </div>
 
         {error && <p className="error">{error}</p>}
-        <button className="btn primary" disabled={busy}>{busy ? 'Saving...' : editing ? 'Save changes' : 'Publish auction'}</button>
+        <button className="btn primary" disabled={busy || preparing}>{busy ? 'Saving...' : editing ? 'Save changes' : 'Publish auction'}</button>
       </form>
     </div>
   );

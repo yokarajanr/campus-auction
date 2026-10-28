@@ -16,7 +16,7 @@ export const uploadPhotos = multer({
     destination: UPLOADS_DIR,
     filename: (req, file, cb) => cb(null, crypto.randomUUID() + EXTENSIONS[file.mimetype]),
   }),
-  limits: { fileSize: 3 * 1024 * 1024, files: MAX_PHOTOS },
+  limits: { fileSize: 8 * 1024 * 1024, files: MAX_PHOTOS },
   fileFilter: (req, file, cb) => {
     if (EXTENSIONS[file.mimetype]) cb(null, true);
     else cb(new HttpError(400, 'Photos must be JPG, PNG, WEBP or GIF'));
