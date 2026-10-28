@@ -6,6 +6,7 @@ import { uploadPhotos, photoUrl, deletePhotoFiles, copyPhotoFiles, MAX_PHOTOS } 
 import { CATEGORIES, CONDITIONS, getAuctionRow, auctionDetail, searchAuctions, toPublicAuction } from '../services/auctions.js';
 import { emitAuctionUpdate, notify } from '../services/realtime.js';
 import { notifySavedSearchMatches } from '../services/savedSearches.js';
+import { sendMatchEmails } from '../services/mailer.js';
 
 const router = Router();
 const MIN_DURATION_MS = 60 * 1000;
@@ -150,7 +151,7 @@ router.post('/', requireAuth, uploadPhotos, withUploadCleanup((req, res) => {
   );
 
   const id = Number(lastInsertRowid);
-  notifySavedSearchMatches(id);
+  sendMatchEmails(notifySavedSearchMatches(id).emails);
   emitAuctionUpdate(id, { reason: 'created' });
   res.status(201).json(auctionDetail(id));
 }));

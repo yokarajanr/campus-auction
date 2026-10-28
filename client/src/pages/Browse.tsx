@@ -8,6 +8,7 @@ import { CATEGORIES, CONDITION_LABELS, capitalize, rupees } from '../format';
 import { AuctionCard } from '../components/AuctionCard';
 import { CategoryIcon } from '../components/CategoryIcon';
 import { Countdown } from '../components/Countdown';
+import { Photo } from '../components/Photo';
 
 const EMPTY_FILTERS = { q: '', category: '', condition: '', minPrice: '', maxPrice: '', closingSoon: false, sort: 'newest' };
 
@@ -129,7 +130,7 @@ export function Browse() {
               <div className="feature-back" aria-hidden="true" />
               <div className="feature-front">
                 <div className="feature-photo">
-                  {featured.photos[0] && <img src={featured.photos[0]} alt="" />}
+                  <Photo src={featured.photos[0]} alt="" />
                   <span className="feature-flag">Ending soonest</span>
                 </div>
                 <div className="feature-body">

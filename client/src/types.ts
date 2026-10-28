@@ -69,6 +69,7 @@ export interface SavedSearch {
   category: string | null;
   condition: string | null;
   maxPrice: number | null;
+  emailAlerts: boolean;
   label: string;
   liveMatches?: number;
   createdAt: number;

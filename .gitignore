@@ -4,4 +4,5 @@ client/dist/
 server/data/*.db
 server/data/*.db-*
 server/uploads/*
+server/data/outbox/
 npm-debug.log*

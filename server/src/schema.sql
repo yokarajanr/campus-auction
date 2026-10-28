@@ -79,6 +79,7 @@ CREATE TABLE IF NOT EXISTS saved_searches (
   category    TEXT,
   condition   TEXT,
   max_price   INTEGER,
+  email_alerts INTEGER NOT NULL DEFAULT 1,
   created_at  INTEGER NOT NULL
 );
 

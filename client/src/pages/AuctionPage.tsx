@@ -10,6 +10,7 @@ import { BidBox } from '../components/BidBox';
 import { SalePanel } from '../components/SalePanel';
 import { AutoBidBox } from '../components/AutoBidBox';
 import { QnA } from '../components/QnA';
+import { Photo } from '../components/Photo';
 import { useNow } from '../hooks';
 
 export function AuctionPage() {
@@ -90,7 +91,7 @@ export function AuctionPage() {
       <div className="auction-side">
       <div className="gallery panel">
         <div className="main-photo">
-          {a.photos[photoIndex] ? <img src={a.photos[photoIndex]} alt={a.title} /> : <span>No photo</span>}
+          <Photo src={a.photos[photoIndex]} alt={a.title} />
         </div>
         {a.photos.length > 1 && (
           <div className="thumbs">
@@ -183,6 +184,7 @@ export function AuctionPage() {
         <div className="panel history-panel">
           <h2>Bid history ({bids.length})</h2>
           {bids.length === 0 ? <p className="muted">No bids yet. Be the first!</p> : (
+            <div className="history-scroll">
             <table className="bids">
               <thead><tr><th>Bidder</th><th>Amount</th><th>Time</th></tr></thead>
               <tbody>
@@ -202,6 +204,7 @@ export function AuctionPage() {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </div>
       </div>

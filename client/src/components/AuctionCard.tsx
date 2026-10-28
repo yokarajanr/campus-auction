@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import type { Auction } from '../types';
 import { CONDITION_LABELS, STATUS_LABELS, capitalize, rupees } from '../format';
 import { Countdown } from './Countdown';
+import { Photo } from './Photo';
 
 export function AuctionCard({ auction, note }: { auction: Auction; note?: string }) {
   const live = auction.status === 'live';
@@ -10,7 +11,7 @@ export function AuctionCard({ auction, note }: { auction: Auction; note?: string
   return (
     <Link to={`/auctions/${auction.id}`} className="card">
       <div className="card-photo">
-        {auction.photos[0] ? <img src={auction.photos[0]} alt={auction.title} loading="lazy" /> : <span>No photo</span>}
+        <Photo src={auction.photos[0]} alt={auction.title} lazy />
         {!live && <span className={`card-status status-${auction.status}`}>{STATUS_LABELS[auction.status]}</span>}
       </div>
       <div className="card-body">

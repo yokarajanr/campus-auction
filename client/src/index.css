@@ -325,6 +325,47 @@ input:disabled, select:disabled { background: #f3f4f6; color: var(--muted); }
 .lead-tag { background: var(--accent-soft); color: var(--accent-dark); }
 .bids .tag { margin-left: 0; }
 
+/* Photos: whole image on top of a blurred copy, so any shape fills its frame. */
+.main-photo, .card-photo, .feature-photo { position: relative; overflow: hidden; isolation: isolate; }
+.photo-backdrop {
+  position: absolute; inset: -24px; z-index: -1; background-size: cover; background-position: center;
+  filter: blur(22px) saturate(1.15); opacity: 0.55; transform: scale(1.05);
+}
+.photo-img { position: relative; width: 100%; height: 100%; object-fit: contain; }
+.main-photo .photo-img { filter: drop-shadow(0 8px 20px rgba(17, 24, 39, 0.18)); }
+.photo-missing { color: var(--muted); font-size: 0.9rem; }
+.main-photo img.photo-img, .card-photo img.photo-img, .feature-photo img.photo-img { object-fit: contain; }
+
+/* Email alert controls */
+.email-check { flex-direction: row !important; align-items: center; gap: 0.5rem; font-weight: 500; }
+.switch { display: inline-flex; align-items: center; gap: 0.45rem; background: none; border: none; cursor: pointer; font: inherit; font-size: 0.82rem; color: var(--muted); padding: 0.2rem; }
+.switch-knob { position: relative; width: 34px; height: 20px; border-radius: 999px; background: #d4d6e0; transition: background 0.15s; }
+.switch-knob::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2); transition: transform 0.15s; }
+.switch.on { color: var(--primary); font-weight: 600; }
+.switch.on .switch-knob { background: var(--primary); }
+.switch.on .switch-knob::after { transform: translateX(14px); }
+.email-list { list-style: none; margin: 0; padding: 0; }
+.email-list li { display: flex; align-items: center; gap: 0.75rem; padding: 0.7rem 0; border-bottom: 1px solid #f1f2f4; }
+.email-list li:last-child { border-bottom: none; }
+
+.mail-status.smtp { color: var(--success); font-weight: 600; }
+.mail-status.ethereal { color: var(--primary); font-weight: 600; }
+.mail-status.outbox { color: var(--warn); font-weight: 600; }
+.modal-backdrop { position: fixed; inset: 0; background: rgba(17, 24, 39, 0.45); display: grid; place-items: center; z-index: 50; padding: 1rem; animation: toast-in 0.15s ease-out; }
+.modal { width: min(640px, 100%); max-height: calc(100vh - 2rem); display: flex; flex-direction: column; background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 24px 64px rgba(17, 24, 39, 0.3); }
+.modal-head { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 0.5rem 0.75rem 1.25rem; border-bottom: 1px solid var(--border); }
+.modal-head h3 { font-family: var(--font-display); }
+.email-frame { width: 100%; height: 560px; max-height: calc(100vh - 6rem); border: none; background: #f7f7fb; }
+
+/* Bid history: fixed-height scrolling frame with a sticky header. */
+.history-scroll { max-height: 360px; overflow-y: auto; border: 1px solid var(--border); border-radius: var(--radius-sm); overscroll-behavior: contain; }
+.history-scroll .bids th { position: sticky; top: 0; background: #fafbfc; z-index: 1; padding: 0.55rem 0.5rem; }
+.history-scroll .bids td { padding-right: 0.5rem; }
+.history-scroll .bids th:first-child { padding-left: 0.75rem; }
+.history-scroll .bids td:first-child { padding-left: 0.75rem; }
+.history-scroll::-webkit-scrollbar { width: 8px; }
+.history-scroll::-webkit-scrollbar-thumb { background: #d4d6e0; border-radius: 8px; }
+
 /* Leading bid highlight */
 .lead-price { font-size: 2.1rem; color: var(--primary); line-height: 1.1; }
 .leader-chip {

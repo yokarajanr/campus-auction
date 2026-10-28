@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 
 process.env.DB_PATH = ':memory:';
 const { default: db } = await import('../src/db.js');
-const { createSavedSearch, deleteSavedSearch, listSavedSearches, notifySavedSearchMatches, matchesSearch } =
+const { createSavedSearch, deleteSavedSearch, listSavedSearches, notifySavedSearchMatches, matchesSearch, setEmailAlerts } =
   await import('../src/services/savedSearches.js');
 
 const T0 = Date.now();
@@ -59,8 +59,33 @@ test('a student with several matching searches gets only one alert per listing',
   createSavedSearch(other, { keyword: 'drafter' });
   createSavedSearch(other, { keyword: 'mini drafter', maxPrice: 500 });
   const id = listing(senior, { title: 'Mini drafter', category: 'other', price: 200 });
-  assert.equal(notifySavedSearchMatches(id), 1);
+  assert.equal(notifySavedSearchMatches(id).notified, 1);
   assert.equal(matchNotes(other, id).length, 1);
+});
+
+test('matching saved searches produce one email per student, only when email alerts are on', () => {
+  const fan = user('fan');
+  const quiet = user('quiet');
+  createSavedSearch(fan, { keyword: 'graphing calculator' });
+  createSavedSearch(fan, { keyword: 'graphing', maxPrice: 900 });
+  createSavedSearch(quiet, { keyword: 'graphing calculator', emailAlerts: false });
+  const id = listing(senior, { title: 'TI graphing calculator', price: 800 });
+  const { notified, emails } = notifySavedSearchMatches(id);
+  assert.equal(notified, 2, 'both students get the in-app alert');
+  assert.deepEqual(emails.map((e) => e.userId), [fan], 'only the student with email alerts on is emailed, once');
+  assert.match(emails[0].to, /@test\.edu$/);
+  assert.equal(emails[0].auction.title, 'TI graphing calculator');
+});
+
+test('email alerts can be switched off for a saved search', () => {
+  const owner = user('owner');
+  const { search } = createSavedSearch(owner, { keyword: 'drawing board' });
+  assert.equal(search.emailAlerts, true);
+  setEmailAlerts(owner, search.id, false);
+  assert.equal(listSavedSearches(owner)[0].emailAlerts, false);
+  rejects(() => setEmailAlerts(junior, search.id, true), 404);
+  const id = listing(senior, { title: 'Drawing board A2', category: 'other', price: 300 });
+  assert.equal(notifySavedSearchMatches(id).emails.some((e) => e.userId === owner), false);
 });
 
 test('sellers are not alerted about their own listings', () => {

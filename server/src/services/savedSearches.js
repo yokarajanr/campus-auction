@@ -23,18 +23,38 @@ export function matchesSearch(s, a) {
 }
 
 // Called once when a listing is published. Notifications are stored, so students who are offline see them later.
+// Returns the email alerts to send; sending happens outside the request so a slow mail server never blocks listing.
 export function notifySavedSearchMatches(auctionId) {
   const a = db.prepare('SELECT * FROM auctions WHERE id = ?').get(auctionId);
-  if (!a || a.status !== 'live') return 0;
-  const searches = db.prepare('SELECT * FROM saved_searches WHERE user_id != ? ORDER BY id').all(a.seller_id);
+  if (!a || a.status !== 'live') return { notified: 0, emails: [] };
+  const searches = db.prepare(`
+    SELECT s.*, u.email, u.name FROM saved_searches s JOIN users u ON u.id = s.user_id
+    WHERE s.user_id != ? ORDER BY s.id`).all(a.seller_id);
   const notified = new Set();
+  const emailed = new Set();
+  const emails = [];
   for (const s of searches) {
-    if (notified.has(s.user_id) || !matchesSearch(s, a)) continue;
-    notified.add(s.user_id);
-    notify(s.user_id, 'saved_search_match',
-      `New listing for "${describeSearch(s)}": "${a.title}", starting at ₹${a.start_price}.`, a.id);
+    if (!matchesSearch(s, a)) continue;
+    if (!notified.has(s.user_id)) {
+      notified.add(s.user_id);
+      notify(s.user_id, 'saved_search_match',
+        `New listing for "${describeSearch(s)}": "${a.title}", starting at ₹${a.start_price}.`, a.id);
+    }
+    if (s.email_alerts && !emailed.has(s.user_id)) {
+      emailed.add(s.user_id);
+      emails.push({
+        userId: s.user_id, to: s.email, name: s.name, label: describeSearch(s),
+        auction: { id: a.id, title: a.title, category: a.category, startPrice: a.start_price, endsAt: a.ends_at },
+      });
+    }
   }
-  return notified.size;
+  return { notified: notified.size, emails };
+}
+
+export function setEmailAlerts(userId, id, enabled) {
+  const { changes } = db.prepare('UPDATE saved_searches SET email_alerts = ? WHERE id = ? AND user_id = ?')
+    .run(enabled ? 1 : 0, id, userId);
+  if (changes === 0) throw new HttpError(404, 'Saved search not found');
 }
 
 function toPublic(s) {
@@ -44,6 +64,7 @@ function toPublic(s) {
     category: s.category,
     condition: s.condition,
     maxPrice: s.max_price,
+    emailAlerts: Boolean(s.email_alerts),
     label: describeSearch(s),
     createdAt: s.created_at,
   };
@@ -73,9 +94,10 @@ export function createSavedSearch(userId, input, { now = Date.now() } = {}) {
   const count = db.prepare('SELECT COUNT(*) AS c FROM saved_searches WHERE user_id = ?').get(userId).c;
   if (count >= 20) throw new HttpError(409, 'You can save up to 20 searches. Delete one first.');
 
+  const emailAlerts = input.emailAlerts === false ? 0 : 1;
   const { lastInsertRowid } = db.prepare(`
-    INSERT INTO saved_searches (user_id, keyword, category, condition, max_price, created_at) VALUES (?, ?, ?, ?, ?, ?)`)
-    .run(userId, keyword, category, condition, maxPrice, now);
+    INSERT INTO saved_searches (user_id, keyword, category, condition, max_price, email_alerts, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)`)
+    .run(userId, keyword, category, condition, maxPrice, emailAlerts, now);
   const saved = db.prepare('SELECT * FROM saved_searches WHERE id = ?').get(lastInsertRowid);
   return { search: toPublic(saved), currentMatches: liveMatches(saved) };
 }
