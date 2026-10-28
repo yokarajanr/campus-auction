@@ -34,6 +34,12 @@ setIo(io);
 
 io.on('connection', (socket) => {
   socket.emit('hello', { serverNow: Date.now() });
+  socket.on('auction:join', (id) => {
+    if (Number.isInteger(id)) socket.join(`auction:${id}`);
+  });
+  socket.on('auction:leave', (id) => {
+    if (Number.isInteger(id)) socket.leave(`auction:${id}`);
+  });
 });
 
 server.listen(PORT, () => {
