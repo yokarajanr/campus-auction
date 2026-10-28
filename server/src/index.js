@@ -10,6 +10,7 @@ import auctionRoutes from './routes/auctions.js';
 import bidRoutes from './routes/bids.js';
 import saleRoutes from './routes/sale.js';
 import notificationRoutes from './routes/notifications.js';
+import savedSearchRoutes from './routes/savedSearches.js';
 import { userFromToken } from './auth.js';
 import { startCloser } from './services/closer.js';
 import { UPLOADS_DIR } from './upload.js';
@@ -32,6 +33,7 @@ app.use('/api/auctions', auctionRoutes);
 app.use('/api/auctions', bidRoutes);
 app.use('/api/auctions', saleRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/saved-searches', savedSearchRoutes);
 
 app.use('/api', (req, res) => res.status(404).json({ error: 'Not found' }));
 app.use(errorHandler);

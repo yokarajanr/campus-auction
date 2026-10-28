@@ -63,6 +63,17 @@ export interface AuctionDetail {
   serverNow: number;
 }
 
+export interface SavedSearch {
+  id: number;
+  keyword: string;
+  category: string | null;
+  condition: string | null;
+  maxPrice: number | null;
+  label: string;
+  liveMatches?: number;
+  createdAt: number;
+}
+
 export interface AppNotification {
   id: number;
   type: string;

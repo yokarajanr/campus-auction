@@ -1,15 +1,30 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { api } from '../api';
+import { useAuth } from '../auth';
 import { socket } from '../socket';
-import type { Auction } from '../types';
+import type { Auction, SavedSearch } from '../types';
 import { CATEGORIES, CONDITION_LABELS, capitalize } from '../format';
 import { AuctionCard } from '../components/AuctionCard';
 
 const EMPTY_FILTERS = { q: '', category: '', condition: '', minPrice: '', maxPrice: '', closingSoon: false, sort: 'newest' };
 
+function filtersFromUrl(params: URLSearchParams) {
+  return {
+    ...EMPTY_FILTERS,
+    q: params.get('q') ?? '',
+    category: params.get('category') ?? '',
+    condition: params.get('condition') ?? '',
+    maxPrice: params.get('maxPrice') ?? '',
+  };
+}
+
 export function Browse() {
-  const [filters, setFilters] = useState(EMPTY_FILTERS);
-  const [searchText, setSearchText] = useState('');
+  const [params] = useSearchParams();
+  const { user } = useAuth();
+  const [filters, setFilters] = useState(() => filtersFromUrl(params));
+  const [searchText, setSearchText] = useState(() => params.get('q') ?? '');
+  const [saveMessage, setSaveMessage] = useState('');
   const [auctions, setAuctions] = useState<Auction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -45,7 +60,29 @@ export function Browse() {
     return () => { socket.off('auctions:changed', load); };
   }, [load]);
 
-  const set = (key: keyof typeof EMPTY_FILTERS, value: string | boolean) => setFilters((f) => ({ ...f, [key]: value }));
+  const set = (key: keyof typeof EMPTY_FILTERS, value: string | boolean) => {
+    setSaveMessage('');
+    setFilters((f) => ({ ...f, [key]: value }));
+  };
+
+  async function saveSearch() {
+    try {
+      const r = await api<{ search: SavedSearch }>('/saved-searches', {
+        method: 'POST',
+        json: {
+          keyword: filters.q,
+          category: filters.category || null,
+          condition: filters.condition || null,
+          maxPrice: filters.maxPrice === '' ? null : Number(filters.maxPrice),
+        },
+      });
+      setSaveMessage(`Saved "${r.search.label}". You'll get an alert when a new match is listed.`);
+    } catch (e) {
+      setSaveMessage((e as Error).message);
+    }
+  }
+
+  const canSave = Boolean(user && (filters.q.trim() || filters.category));
 
   return (
     <div>
@@ -73,8 +110,10 @@ export function Browse() {
             <option value="price_asc">Price: low to high</option>
             <option value="price_desc">Price: high to low</option>
           </select>
-          <button className="btn" onClick={() => { setFilters(EMPTY_FILTERS); setSearchText(''); }}>Clear</button>
+          <button className="btn" onClick={() => { setFilters(EMPTY_FILTERS); setSearchText(''); setSaveMessage(''); }}>Clear</button>
+          {canSave && <button className="btn primary" onClick={saveSearch}>Alert me about new matches</button>}
         </div>
+        {saveMessage && <p className="notice">{saveMessage}</p>}
       </section>
 
       {error && <p className="error">{error}</p>}
