@@ -74,6 +74,18 @@ export interface SavedSearch {
   createdAt: number;
 }
 
+export type Proposal =
+  | { type: 'auto_bid'; auctionId: number; title: string; maxAmount: number; currentPrice: number; nextMinBid: number }
+  | { type: 'saved_search'; keyword: string; category: string | null; maxPrice: number | null; label: string };
+
+export interface AssistantReply {
+  reply: string;
+  results: Auction[] | null;
+  proposals: Proposal[];
+  mode: 'gemini' | 'rules';
+  fallbackReason?: string;
+}
+
 export interface AppNotification {
   id: number;
   type: string;

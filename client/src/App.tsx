@@ -7,6 +7,7 @@ import { AuctionPage } from './pages/AuctionPage';
 import { MyListings } from './pages/MyListings';
 import { MyBids } from './pages/MyBids';
 import { Wanted } from './pages/Wanted';
+import { Assistant } from './pages/Assistant';
 import { NotificationBell } from './components/NotificationBell';
 
 function Header() {
@@ -21,6 +22,7 @@ function Header() {
           {user && <NavLink to="/my-listings">My listings</NavLink>}
           {user && <NavLink to="/my-bids">My bids</NavLink>}
           {user && <NavLink to="/wanted">Wanted</NavLink>}
+          {user && <NavLink to="/assistant">Assistant</NavLink>}
         </nav>
         <div className="user">
           {user ? (
@@ -53,6 +55,7 @@ export default function App() {
             <Route path="/my-listings" element={<RequireAuth><MyListings /></RequireAuth>} />
             <Route path="/my-bids" element={<RequireAuth><MyBids /></RequireAuth>} />
             <Route path="/wanted" element={<RequireAuth><Wanted /></RequireAuth>} />
+            <Route path="/assistant" element={<RequireAuth><Assistant /></RequireAuth>} />
             <Route path="*" element={<p className="muted">Page not found.</p>} />
           </Routes>
         </main>
