@@ -119,11 +119,3 @@ Run `npm run seed -- --reset` right before you start: the study lamp closes 3 mi
 6. **Q&A**: ask "Do the brakes work?", answer it as Ravi, then start typing a similar question to show the "already asked" hint.
 7. **Never miss it**: as Ravi, sell a "scientific calculator" for ₹300. Priya (saved search) gets an alert.
 8. **Closing and sale**: the study lamp closes **Unsold**; the Ladybird cycle closes with a winner. As Meena, approve; as Priya, read the pickup code; as Meena, enter it. Status becomes **Sold**.
-
-## Known limitations
-
-- Accounts are email + password with no campus email verification.
-- Photos are stored on the server's disk; a real deployment would use object storage.
-- The closing job runs inside the single server process; a multi-server deployment would need a shared scheduler.
-- Pickup codes are 4 digits with no attempt limit.
-- The offline assistant only understands simple phrasing; Gemini handles free-form requests.
