@@ -27,6 +27,16 @@ export function photoUrl(file) {
   return `/uploads/${file.filename}`;
 }
 
+// Relisted items get their own copies so editing one listing never deletes the other's photos.
+export function copyPhotoFiles(urls) {
+  return urls.map((url) => {
+    const source = path.join(UPLOADS_DIR, path.basename(url));
+    const copy = crypto.randomUUID() + path.extname(source);
+    fs.copyFileSync(source, path.join(UPLOADS_DIR, copy));
+    return `/uploads/${copy}`;
+  });
+}
+
 export function deletePhotoFiles(urls) {
   for (const url of urls) {
     fs.rm(path.join(UPLOADS_DIR, path.basename(url)), { force: true }, () => {});

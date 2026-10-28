@@ -89,7 +89,7 @@ export function SalePanel({ detail, onChange }: Props) {
       <p className="muted">Reserved for {a.winnerName}. Handover pending.</p>
     );
   } else if (isSeller && ['unsold', 'rejected', 'failed_pickup', 'cancelled'].includes(a.status)) {
-    content = <Link className="btn" to="/sell">List an item again</Link>;
+    content = <Link className="btn primary" to={`/sell?relist=${a.id}`}>List this item again</Link>;
   }
 
   if (!content) return null;

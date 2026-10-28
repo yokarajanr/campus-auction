@@ -2,7 +2,7 @@ import { Router } from 'express';
 import db from '../db.js';
 import { HttpError } from '../errors.js';
 import { optionalAuth, requireAuth } from '../auth.js';
-import { uploadPhotos, photoUrl, deletePhotoFiles, MAX_PHOTOS } from '../upload.js';
+import { uploadPhotos, photoUrl, deletePhotoFiles, copyPhotoFiles, MAX_PHOTOS } from '../upload.js';
 import { CATEGORIES, CONDITIONS, getAuctionRow, auctionDetail, searchAuctions, toPublicAuction } from '../services/auctions.js';
 import { emitAuctionUpdate, notify } from '../services/realtime.js';
 import { notifySavedSearchMatches } from '../services/savedSearches.js';
@@ -114,10 +114,31 @@ router.get('/:id', optionalAuth, (req, res) => {
   res.json(detail);
 });
 
+const RELISTABLE = ['unsold', 'rejected', 'failed_pickup', 'cancelled'];
+
+// Photos the seller kept from the auction being listed again. Validated before anything is copied.
+function relistPhotos(body, userId) {
+  if (!body.relistFrom) return [];
+  const source = getAuctionRow(Number(body.relistFrom));
+  if (!source) throw new HttpError(404, 'The auction to list again was not found');
+  if (source.seller_id !== userId) throw new HttpError(403, 'You can only list your own items again');
+  if (!RELISTABLE.includes(source.status)) throw new HttpError(409, 'Only unsold, rejected, cancelled or failed-pickup items can be listed again');
+  const original = JSON.parse(source.photos_json);
+  if (body.keepPhotos === undefined) return original;
+  let keep;
+  try { keep = JSON.parse(body.keepPhotos); } catch { throw new HttpError(400, 'keepPhotos must be a JSON array'); }
+  if (!Array.isArray(keep)) throw new HttpError(400, 'keepPhotos must be a JSON array');
+  return original.filter((p) => keep.includes(p));
+}
+
 router.post('/', requireAuth, uploadPhotos, withUploadCleanup((req, res) => {
-  const fields = parseListing(req.body ?? {}, { partial: false });
-  const photos = (req.files ?? []).map(photoUrl);
-  if (photos.length === 0) throw new HttpError(400, 'Add at least one photo');
+  const body = req.body ?? {};
+  const fields = parseListing(body, { partial: false });
+  const reused = relistPhotos(body, req.user.id);
+  const uploaded = (req.files ?? []).map(photoUrl);
+  if (reused.length + uploaded.length === 0) throw new HttpError(400, 'Add at least one photo');
+  if (reused.length + uploaded.length > MAX_PHOTOS) throw new HttpError(400, `A listing can have at most ${MAX_PHOTOS} photos`);
+  const photos = [...copyPhotoFiles(reused), ...uploaded];
 
   const now = Date.now();
   const { lastInsertRowid } = db.prepare(`

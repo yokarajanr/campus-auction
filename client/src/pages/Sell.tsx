@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { api, serverNow } from '../api';
 import { useAuth } from '../auth';
 import type { Auction, AuctionDetail } from '../types';
@@ -37,10 +37,13 @@ const DEFAULTS: FormValues = {
 export function Sell() {
   const { id } = useParams();
   const editing = Boolean(id);
+  const [params] = useSearchParams();
+  const relistId = editing ? null : params.get('relist');
   const { user } = useAuth();
   const navigate = useNavigate();
 
   const [original, setOriginal] = useState<Auction | null>(null);
+  const [relistSource, setRelistSource] = useState<Auction | null>(null);
   const [values, setValues] = useState<FormValues>(DEFAULTS);
   const [keepPhotos, setKeepPhotos] = useState<string[]>([]);
   const [newPhotos, setNewPhotos] = useState<File[]>([]);
@@ -57,6 +60,17 @@ export function Sell() {
       })
       .catch((e: Error) => setError(e.message));
   }, [id]);
+
+  useEffect(() => {
+    if (!relistId) return;
+    api<AuctionDetail>(`/auctions/${relistId}`)
+      .then(({ auction }) => {
+        setRelistSource(auction);
+        setValues({ ...valuesFrom(auction), endsAt: toLocalInput(serverNow() + 24 * 3_600_000) });
+        setKeepPhotos(auction.photos);
+      })
+      .catch((e: Error) => setError(e.message));
+  }, [relistId]);
 
   const locked = editing && (original?.bidCount ?? 0) > 0;
   const photoCount = keepPhotos.length + newPhotos.length;
@@ -80,6 +94,10 @@ export function Sell() {
     }
     if (!before || values.endsAt !== before.endsAt) form.append('endsAt', new Date(values.endsAt).toISOString());
     if (original && keepPhotos.length !== original.photos.length) form.append('keepPhotos', JSON.stringify(keepPhotos));
+    if (relistSource) {
+      form.append('relistFrom', String(relistSource.id));
+      form.append('keepPhotos', JSON.stringify(keepPhotos));
+    }
     newPhotos.forEach((file) => form.append('photos', file));
 
     setBusy(true);
@@ -94,11 +112,15 @@ export function Sell() {
   }
 
   if (editing && original && original.sellerId !== user?.id) return <p className="error">Only the seller can edit this listing.</p>;
+  if (relistSource && relistSource.sellerId !== user?.id) return <p className="error">Only the seller can list this item again.</p>;
   if (editing && !original) return error ? <p className="error">{error}</p> : <p className="muted">Loading...</p>;
 
   return (
     <div className="narrow panel">
-      <h1>{editing ? 'Edit listing' : 'Sell an item'}</h1>
+      <h1>{editing ? 'Edit listing' : relistSource ? 'List this item again' : 'Sell an item'}</h1>
+      {relistSource && (
+        <p className="notice">Copied from your earlier listing. Pick a new closing time, change anything you like, then publish. The earlier auction stays in your history.</p>
+      )}
       {locked && <p className="notice">Someone has already bid, so only the description can change and photos can only be added. This keeps the auction fair.</p>}
       <form onSubmit={submit} className="form">
         <label>Title

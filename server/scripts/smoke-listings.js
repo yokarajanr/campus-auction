@@ -141,7 +141,32 @@ check('cancelled listing disappears from browse', r.data?.auctions.length === 1 
 r = await api('GET', '/auctions/mine', { token: seller.token });
 check('seller sees both listings (incl. cancelled) in /mine', r.data?.auctions.length === 2);
 
+r = await api('POST', '/auctions', { token: seller.token, form: listingForm({ ...base, title: 'Relist me', relistFrom: cycle.id, endsAt: inHours(5) }, 0) });
+check('a live item cannot be listed again', r.status === 409, r.data?.error);
+
+const lamp = (await api('POST', '/auctions', { token: seller.token, form: listingForm({ ...base, title: 'Study lamp', category: 'electronics', endsAt: inHours(1) }, 2) })).data.auction;
+const closeDb = new Database(fileURLToPath(new URL('../data/campus.db', import.meta.url)));
+closeDb.prepare('UPDATE auctions SET ends_at = ? WHERE id = ?').run(Date.now() - 1, lamp.id);
+closeDb.close();
+await new Promise((resolve) => setTimeout(resolve, 2000));
+check('lamp with no bids closed as unsold', (await api('GET', `/auctions/${lamp.id}`)).data.auction.status === 'unsold');
+
+r = await api('POST', '/auctions', { token: buyer.token, form: listingForm({ ...base, title: 'Study lamp', relistFrom: lamp.id, endsAt: inHours(5) }, 0) });
+check("someone else cannot list the seller's item again", r.status === 403);
+
+r = await api('POST', '/auctions', {
+  token: seller.token,
+  form: listingForm({ ...base, title: 'Study lamp', category: 'electronics', relistFrom: lamp.id, keepPhotos: JSON.stringify([lamp.photos[0]]), endsAt: inHours(5) }, 0),
+});
+const relisted = r.data?.auction;
+check('seller lists the unsold item again with its photo', r.status === 201 && relisted.status === 'live' && relisted.photos.length === 1, r.data?.error ?? '');
+check('relisted photo is a separate copy that is served', relisted && relisted.photos[0] !== lamp.photos[0]
+  && (await fetch(BASE.replace('/api', '') + relisted.photos[0])).status === 200);
+check('new auction accepts bids', (await api('POST', `/auctions/${relisted.id}/bids`, { token: buyer.token, json: { amount: 300 } })).status === 201);
+check('the earlier auction stays unsold in history', (await api('GET', `/auctions/${lamp.id}`)).data.auction.status === 'unsold');
+
 await api('POST', `/auctions/${cycle.id}/cancel`, { token: seller.token, json: { reason: 'test cleanup' } });
+await api('POST', `/auctions/${relisted.id}/cancel`, { token: seller.token, json: { reason: 'test cleanup' } });
 
 console.log(failures === 0 ? '\nAll listing checks passed' : `\n${failures} check(s) failed`);
 process.exit(failures === 0 ? 0 : 1);
