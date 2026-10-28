@@ -7,6 +7,8 @@ import './db.js';
 import { errorHandler } from './errors.js';
 import authRoutes from './routes/auth.js';
 import auctionRoutes from './routes/auctions.js';
+import bidRoutes from './routes/bids.js';
+import { startCloser } from './services/closer.js';
 import { UPLOADS_DIR } from './upload.js';
 import { setIo } from './services/realtime.js';
 
@@ -24,6 +26,7 @@ app.get('/api/health', (req, res) => {
 app.use('/uploads', express.static(UPLOADS_DIR, { maxAge: '1d' }));
 app.use('/api/auth', authRoutes);
 app.use('/api/auctions', auctionRoutes);
+app.use('/api/auctions', bidRoutes);
 
 app.use('/api', (req, res) => res.status(404).json({ error: 'Not found' }));
 app.use(errorHandler);
@@ -44,4 +47,5 @@ io.on('connection', (socket) => {
 
 server.listen(PORT, () => {
   console.log(`Campus Auction server listening on http://localhost:${PORT}`);
+  startCloser();
 });

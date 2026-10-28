@@ -6,6 +6,8 @@ import { socket } from '../socket';
 import type { AuctionDetail } from '../types';
 import { CONDITION_LABELS, STATUS_LABELS, capitalize, formatTime, rupees } from '../format';
 import { Countdown } from '../components/Countdown';
+import { BidBox } from '../components/BidBox';
+import { useNow } from '../hooks';
 
 export function AuctionPage() {
   const { id } = useParams();
@@ -13,6 +15,13 @@ export function AuctionPage() {
   const [detail, setDetail] = useState<AuctionDetail | null>(null);
   const [error, setError] = useState('');
   const [photoIndex, setPhotoIndex] = useState(0);
+  const [flash, setFlash] = useState('');
+  const now = useNow();
+
+  const showExtended = useCallback(() => {
+    setFlash('Last-minute bid! Closing time was extended to 60 seconds after that bid.');
+    setTimeout(() => setFlash(''), 8000);
+  }, []);
 
   const load = useCallback(() => {
     api<AuctionDetail>(`/auctions/${id}`)
@@ -24,22 +33,36 @@ export function AuctionPage() {
 
   useEffect(() => {
     const join = () => socket.emit('auction:join', Number(id));
+    const onUpdate = (payload: { auctionId: number; extended?: boolean }) => {
+      if (payload.auctionId !== Number(id)) return;
+      if (payload.extended) showExtended();
+      load();
+    };
     join();
     socket.on('connect', join);
-    socket.on('auction:update', load);
+    socket.on('auction:update', onUpdate);
     return () => {
       socket.emit('auction:leave', Number(id));
       socket.off('connect', join);
-      socket.off('auction:update', load);
+      socket.off('auction:update', onUpdate);
     };
-  }, [id, load]);
+  }, [id, load, showExtended]);
+
+  const endsAt = detail?.auction.endsAt;
+  const status = detail?.auction.status;
+  useEffect(() => {
+    if (status !== 'live' || endsAt == null) return;
+    const timer = setTimeout(load, Math.max(0, endsAt - serverNow()) + 1500);
+    return () => clearTimeout(timer);
+  }, [endsAt, status, load]);
 
   if (error && !detail) return <p className="error">{error}</p>;
   if (!detail) return <p className="muted">Loading...</p>;
 
   const { auction: a, bids, autoBids } = detail;
   const isSeller = user?.id === a.sellerId;
-  const open = a.status === 'live' && a.endsAt > serverNow();
+  const open = a.status === 'live' && a.endsAt > now;
+  const closing = a.status === 'live' && !open;
 
   async function cancel() {
     const reason = window.prompt('Why are you cancelling? (optional, shown publicly)');
@@ -91,9 +114,14 @@ export function AuctionPage() {
             </div>
           </div>
 
+          {flash && <p className="flash">{flash}</p>}
           {open && (
-            <p className="muted">Next bid must be at least <strong>{rupees(a.nextMinBid)}</strong> (increment {rupees(a.minIncrement)}).</p>
+            <>
+              <p className="muted">Next bid must be at least <strong>{rupees(a.nextMinBid)}</strong> (increment {rupees(a.minIncrement)}).</p>
+              <BidBox auction={a} onPlaced={(d) => { setDetail(d); if (d.extended) showExtended(); }} />
+            </>
           )}
+          {closing && <p className="muted">Bidding has ended. Finalising the result...</p>}
           {a.outcomeNote && <p className="notice">{a.outcomeNote}</p>}
           {error && <p className="error">{error}</p>}
 
